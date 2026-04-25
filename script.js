@@ -82,7 +82,7 @@ const MENU = [
   { id: 'melon',       emoji: '🍈', name: 'เมลอน' },
   { id: 'lemon',       emoji: '🍋', name: 'เลมอน' },
   { id: 'grape',       emoji: '🍇', name: 'องุ่น' },
-  { id: 'cone',        emoji: '🍧', name: 'กรวย' },
+  { id: 'cone',        emoji: '🍧', name: 'บิงซู' },
   { id: 'sprinkles',   emoji: '🌈', name: 'สปริงเกิล' },
 ];
 
