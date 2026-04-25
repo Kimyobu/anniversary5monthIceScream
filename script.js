@@ -10,7 +10,7 @@
 // ──────────────────────────────────────────
 const CONFIG = {
   totalCustomers:  10,        // จำนวนลูกค้าที่ต้องเสิร์ฟ
-  timerSeconds:    18,        // เวลาต่อออเดอร์ (วินาที)
+  timerSeconds:    30,        // เวลาต่อออเดอร์ (วินาที)
   minItems:        1,         // ออเดอร์ขั้นต่ำ (ชิ้น)
   maxItems:        3,         // ออเดอร์สูงสุด (ชิ้น)
   pointsPerServe:  100,       // คะแนนต่อการเสิร์ฟถูกต้อง
@@ -19,7 +19,53 @@ const CONFIG = {
   redirectDelay:   3000,      // ms ก่อน redirect (หลัง win)
 
   // 🔗 URL ปลายทาง (ใส่ URL ซัปไพรส์ตรงนี้)
-  redirectUrl: 'https://YOUR_SURPRISE_URL_HERE',
+  redirectUrl: 'https://kimyobu.github.io/anniversary5month/',
+
+  // 🔊 SFX ENABLED
+  sfxEnabled:      true,      // เปิด/ปิดเสียง
+};
+
+// ──────────────────────────────────────────
+// 🔊 SOUND EFFECTS SYSTEM
+// ──────────────────────────────────────────
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(frequency = 800, duration = 100, type = 'sine', volume = 0.3) {
+  if (!CONFIG.sfxEnabled) return;
+  try {
+    const now = audioContext.currentTime;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    osc.type = type;
+    osc.frequency.value = frequency;
+    
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + duration / 1000);
+    
+    osc.start(now);
+    osc.stop(now + duration / 1000);
+  } catch(e) {
+    console.log('Audio play error:', e);
+  }
+}
+
+// Sound presets
+const SFX = {
+  click:     () => playSound(600, 100, 'sine', 0.2),
+  select:    () => playSound(800, 120, 'sine', 0.25),
+  remove:    () => playSound(400, 100, 'sine', 0.2),
+  success:   () => { playSound(800, 80); setTimeout(() => playSound(1000, 80), 100); },
+  warning:   () => playSound(700, 150, 'triangle', 0.3),
+  gameover:  () => { playSound(300, 400, 'sine', 0.3); },
+  win:       () => { 
+    playSound(523.25, 150);
+    setTimeout(() => playSound(659.25, 150), 160);
+    setTimeout(() => playSound(783.99, 300), 320);
+  },
 };
 
 // ──────────────────────────────────────────
@@ -71,6 +117,7 @@ const state = {
   timerInterval:   null,
   customerQueue:   [],
   activeCustomer:  null,
+  lastWarnedTimer: null, // Track last timer warning
 };
 
 // ──────────────────────────────────────────
@@ -110,6 +157,9 @@ function initGame() {
   // Build menu grid
   buildMenu();
 
+  // Init scroll controls
+  setTimeout(initMenuScroll, 50);
+
   // Add progress bar
   addProgressBar();
 
@@ -134,7 +184,10 @@ function buildMenu() {
       <span>${item.emoji}</span>
       <span class="menu-btn-label">${item.name}</span>
     `;
-    btn.addEventListener('click', () => addToTray(item));
+    btn.addEventListener('click', () => {
+      SFX.select();
+      addToTray(item);
+    });
     grid.appendChild(btn);
   });
 }
@@ -145,6 +198,7 @@ function buildMenu() {
 function nextCustomer() {
   // Stop any running timer
   clearInterval(state.timerInterval);
+  state.lastWarnedTimer = null; // Reset warning tracker
 
   // Done?
   if (state.customersDone >= CONFIG.totalCustomers) {
@@ -212,7 +266,10 @@ function renderTray() {
     div.className = 'tray-item';
     div.textContent = item.emoji;
     div.title = item.name;
-    div.addEventListener('click', () => removeFromTray(i));
+    div.addEventListener('click', () => {
+      SFX.remove();
+      removeFromTray(i);
+    });
     tray.appendChild(div);
   });
 
@@ -295,6 +352,7 @@ function serve() {
   clearInterval(state.timerInterval);
 
   // Score
+  SFX.success();
   let pts = CONFIG.pointsPerServe;
   if (state.timerValue >= CONFIG.bonusThreshold) {
     pts += CONFIG.bonusPoints;
@@ -357,9 +415,19 @@ function renderTimer() {
   if (t <= 5) {
     bar.classList.add('danger');
     num.classList.add('danger');
+    // Play warning sound when hitting danger
+    if (state.lastWarnedTimer !== 5) {
+      SFX.warning();
+      state.lastWarnedTimer = 5;
+    }
   } else if (t <= 9) {
     bar.classList.add('warn');
     num.classList.add('warn');
+    // Play warning sound when hitting warning level
+    if (state.lastWarnedTimer !== 9) {
+      SFX.warning();
+      state.lastWarnedTimer = 9;
+    }
   }
 }
 
@@ -391,6 +459,7 @@ function updateProgressBar() {
 // 🏆 WIN
 // ──────────────────────────────────────────
 function triggerWin() {
+  SFX.win();
   showScreen('win');
   $('win-score-num').textContent = state.score;
 
@@ -407,6 +476,7 @@ function triggerWin() {
 // 💀 GAME OVER
 // ──────────────────────────────────────────
 function triggerGameOver() {
+  SFX.gameover();
   $('over-done').textContent = state.customersDone;
   showScreen('over');
 }
@@ -478,22 +548,105 @@ function randInt(min, max) {
 }
 
 // ──────────────────────────────────────────
+// 🎠 MENU SCROLL — arrows + drag + touch
+// ──────────────────────────────────────────
+function initMenuScroll() {
+  const wrap  = document.querySelector('.menu-scroll-wrap');
+  const btnL  = $('arrow-left');
+  const btnR  = $('arrow-right');
+  if (!wrap || !btnL || !btnR) return;
+
+  const STEP = 200; // px per arrow click
+
+  // ── Arrow buttons ──
+  function scrollBy(px) {
+    wrap.scrollBy({ left: px, behavior: 'smooth' });
+  }
+
+  btnL.addEventListener('click', () => scrollBy(-STEP));
+  btnR.addEventListener('click', () => scrollBy(+STEP));
+
+  // Update arrow disabled state
+  function updateArrows() {
+    const atStart = wrap.scrollLeft <= 4;
+    const atEnd   = wrap.scrollLeft >= wrap.scrollWidth - wrap.clientWidth - 4;
+    btnL.disabled = atStart;
+    btnR.disabled = atEnd;
+  }
+
+  wrap.addEventListener('scroll', updateArrows, { passive: true });
+  // call once after items are rendered
+  setTimeout(updateArrows, 100);
+
+  // ── Mouse drag (desktop) ──
+  let isDragging = false;
+  let dragStartX = 0;
+  let scrollStartX = 0;
+
+  wrap.addEventListener('mousedown', e => {
+    isDragging  = true;
+    dragStartX  = e.clientX;
+    scrollStartX = wrap.scrollLeft;
+    wrap.classList.add('grabbing');
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStartX;
+    wrap.scrollLeft = scrollStartX - dx;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    wrap.classList.remove('grabbing');
+  });
+
+  // ── Touch swipe (iPad / mobile) ──
+  // Native touch scroll already works via overflow-x: auto + -webkit-overflow-scrolling
+  // We just block vertical scroll propagation while swiping horizontally
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let isHorizSwipe = false;
+
+  wrap.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    isHorizSwipe = false;
+  }, { passive: true });
+
+  wrap.addEventListener('touchmove', e => {
+    const dx = Math.abs(e.touches[0].clientX - touchStartX);
+    const dy = Math.abs(e.touches[0].clientY - touchStartY);
+    if (!isHorizSwipe && dx > dy + 5) isHorizSwipe = true;
+    if (isHorizSwipe) e.stopPropagation();
+  }, { passive: true });
+
+  // Re-check arrows after touch ends
+  wrap.addEventListener('touchend', updateArrows, { passive: true });
+}
+
+// ──────────────────────────────────────────
 // 🖱 EVENT LISTENERS
 // ──────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
 
   // Start button
   $('btn-start').addEventListener('click', () => {
+    SFX.click();
     initGame();
   });
 
   // Serve button
   $('btn-serve').addEventListener('click', () => {
+    SFX.click();
     serve();
   });
 
   // Retry button
   $('btn-retry').addEventListener('click', () => {
+    SFX.click();
     initGame();
   });
 

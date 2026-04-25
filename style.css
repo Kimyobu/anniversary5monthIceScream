@@ -491,46 +491,142 @@ html, body {
   50%      { box-shadow: 0 4px 28px rgba(92,184,92,.7); }
 }
 
-/* ── MENU ── */
+/* ── MENU SCROLL ── */
 .menu-section {
-  padding: 0 16px 24px;
-  max-width: 900px;
-  margin: 0 auto;
+  padding: 0 0 32px;
+  max-width: 100%;
+  position: relative;
 }
 
-.menu-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+.menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  margin-bottom: 10px;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.menu-arrows {
+  display: flex;
+  gap: 8px;
+}
+
+.arrow-btn {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--pink-border);
+  background: white;
+  color: var(--pink-deep);
+  font-size: 1.3rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px var(--pink-shadow);
+  transition: background .15s, transform .15s, box-shadow .15s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.arrow-btn:hover {
+  background: var(--pink-soft);
+  transform: scale(1.1);
+  box-shadow: 0 4px 14px var(--pink-shadow);
+}
+.arrow-btn:active { transform: scale(.92); }
+.arrow-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+/* iPad: show arrows always; mobile: show always too */
+@media (hover: none) {
+  .arrow-btn { background: var(--pink-soft); }
+}
+
+.menu-scroll-wrap {
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;        /* smooth iOS scroll */
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;                    /* Firefox */
+  cursor: grab;
+  padding: 8px 16px 12px;
+}
+.menu-scroll-wrap::-webkit-scrollbar { display: none; }
+.menu-scroll-wrap.grabbing { cursor: grabbing; }
+
+/* fade edges */
+.menu-scroll-wrap {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black 20px,
+    black calc(100% - 20px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black 20px,
+    black calc(100% - 20px),
+    transparent 100%
+  );
+}
+
+.menu-track {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: 10px;
+  width: max-content;
+  padding: 4px 8px;
 }
 
 .menu-btn {
   background: white;
   border: 2px solid var(--pink-border);
   border-radius: var(--radius-md);
-  padding: 12px 8px 10px;
+  padding: 14px 10px 12px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  font-size: 1.7rem;
+  gap: 5px;
+  font-size: 1.8rem;
   transition: transform .15s, box-shadow .15s, background .15s;
   box-shadow: 0 2px 8px var(--pink-shadow);
+  scroll-snap-align: start;
+  flex-shrink: 0;
+
+  /* Sizes per device */
+  width: 82px;
+  -webkit-tap-highlight-color: transparent;
 }
+
+/* iPad (768–1024px) */
+@media (min-width: 768px) and (max-width: 1180px) {
+  .menu-btn { width: 96px; font-size: 2rem; padding: 16px 12px 14px; }
+}
+
+/* Desktop */
+@media (min-width: 1181px) {
+  .menu-btn { width: 90px; }
+}
+
 .menu-btn:hover {
-  transform: translateY(-4px) scale(1.07);
-  box-shadow: 0 6px 18px var(--pink-shadow);
+  transform: translateY(-5px) scale(1.08);
+  box-shadow: 0 8px 20px var(--pink-shadow);
   background: var(--pink-soft);
 }
-.menu-btn:active { transform: scale(.94); }
+.menu-btn:active { transform: scale(.92); }
 
 .menu-btn-label {
-  font-size: .65rem;
+  font-size: .68rem;
   font-weight: 700;
   color: var(--text-mid);
   text-align: center;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 /* ── TOAST ── */

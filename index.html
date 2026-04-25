@@ -86,11 +86,19 @@
 
     </main>
 
-    <!-- Menu grid -->
+    <!-- Menu scroll -->
     <section class="menu-section">
-      <div class="menu-label">เลือกไอศกรีม 👇</div>
-      <div class="menu-grid" id="menu-grid">
-        <!-- filled by JS -->
+      <div class="menu-header">
+        <div class="menu-label">เลือกไอศกรีม 👇</div>
+        <div class="menu-arrows">
+          <button class="arrow-btn" id="arrow-left" aria-label="เลื่อนซ้าย">‹</button>
+          <button class="arrow-btn" id="arrow-right" aria-label="เลื่อนขวา">›</button>
+        </div>
+      </div>
+      <div class="menu-scroll-wrap">
+        <div class="menu-track" id="menu-grid">
+          <!-- filled by JS -->
+        </div>
       </div>
     </section>
 
